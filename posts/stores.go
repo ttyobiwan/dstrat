@@ -117,7 +117,7 @@ func (s *PostDBStore) Create(title, content string, author int, topics []int) (*
 		return nil, fmt.Errorf("preparing post-topics statement: %v", err)
 	}
 
-	result, err = stmt.Exec(postTopicsValues...)
+	_, err = stmt.Exec(postTopicsValues...)
 	if err != nil {
 		return nil, fmt.Errorf("executing post-topics query: %v", err)
 	}
