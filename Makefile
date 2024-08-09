@@ -13,5 +13,5 @@ temporal: ## Start temporal server
 	temporal server start-dev --ui-port 9090 --db-filename temporal.sqlite
 
 .PHONY: server
-server: ## Start server
+server: ## Start echo server
 	air

@@ -38,7 +38,7 @@ func getDB(getenv func(string) string) (*sql.DB, error) {
 	return db, nil
 }
 
-func newServer() *echo.Echo {
+func newServer(db *sql.DB) *echo.Echo {
 	e := echo.New()
 
 	e.Use(newLoggingMiddleware())
@@ -48,7 +48,7 @@ func newServer() *echo.Echo {
 	e.Use(middleware.RequestID())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{Timeout: time.Second * 25}))
 
-	addRoutes(e)
+	addRoutes(e, db)
 
 	return e
 }
@@ -67,10 +67,9 @@ func run(ctx context.Context, getenv func(string) string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("database", db)
 
 	// Start server
-	srv := newServer()
+	srv := newServer(db)
 	go func() {
 		port := getenv("PORT")
 		if port == "" {
