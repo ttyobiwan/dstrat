@@ -1,16 +1,18 @@
 package posts
 
+import "github.com/ttyobiwan/dstrat/users"
+
 type Topic struct {
-	ID   int
-	Name string
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type Post struct {
-	ID       int
-	AuthorID int
-	Title    string
-	Content  string
-	Topics   []*Topic
+	ID      int
+	Title   string
+	Content string
+	Author  *users.User
+	Topics  []*Topic
 }
 
 type Follower struct {
