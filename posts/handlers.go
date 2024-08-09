@@ -47,3 +47,39 @@ func (h *TopicHandler) CreateTopic(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, topic)
 }
+
+type PostHandler struct {
+	store PostStore
+}
+
+func NewPostHandler(store PostStore) *PostHandler {
+	return &PostHandler{store}
+}
+
+func (h *PostHandler) CreatePost(c echo.Context) error {
+	// Get request data
+	// TODO: Author should be taken from header or cookie
+	data := struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+		Author  int    `json:"author"`
+		Topics  []int  `json:"topics"`
+	}{}
+	err := c.Bind(&data)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, struct {
+			Detail string `json:"detail"`
+		}{"Invalid request"})
+	}
+
+	// Create new post
+	post, err := h.store.Create(data.Title, data.Content, data.Author, data.Topics)
+	if err != nil {
+		return fmt.Errorf("creating post: %v", err)
+	}
+
+	// TODO: Schedule task to notify followers
+	// This could probably also require a transaction
+
+	return c.JSON(http.StatusCreated, post)
+}

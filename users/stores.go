@@ -44,7 +44,7 @@ func (s *UserDBStore) Create(username string) (*User, error) {
 }
 
 func (s *UserDBStore) GetByUsername(username string) (*User, error) {
-	query := `SELECT id, username FROM users WHERE username = ?`
+	const query = `SELECT id, username FROM users WHERE username = ?`
 
 	var user User
 	err := s.DB().

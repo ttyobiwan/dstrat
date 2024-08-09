@@ -8,14 +8,9 @@ type Topic struct {
 }
 
 type Post struct {
-	ID      int
-	Title   string
-	Content string
-	Author  *users.User
-	Topics  []*Topic
-}
-
-type Follower struct {
-	UserID  int
-	TopicID int
+	ID      int         `json:"id"`
+	Title   string      `json:"title"`
+	Content string      `json:"content"`
+	Author  *users.User `json:"author"`
+	Topics  []*Topic    `json:"topics"`
 }

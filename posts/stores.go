@@ -1,11 +1,15 @@
 package posts
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/ttyobiwan/dstrat/internal/sqlite"
+	"github.com/ttyobiwan/dstrat/users"
 )
 
 var ErrNotFound = errors.New("entry not found")
@@ -44,7 +48,7 @@ func (s *TopicDBStore) Create(name string) (*Topic, error) {
 }
 
 func (s *TopicDBStore) GetByName(name string) (*Topic, error) {
-	query := `SELECT id, name FROM topics WHERE name = ?`
+	const query = `SELECT id, name FROM topics WHERE name = ?`
 
 	var topic Topic
 	err := s.DB().
@@ -58,4 +62,115 @@ func (s *TopicDBStore) GetByName(name string) (*Topic, error) {
 	}
 
 	return &topic, nil
+}
+
+type PostStore interface {
+	Create(title, content string, author int, topics []int) (*Post, error)
+}
+
+type PostDBStore struct {
+	*sqlite.DBStore
+}
+
+func NewPostDBStore(db *sql.DB) *PostDBStore {
+	return &PostDBStore{sqlite.NewDBStore(db)}
+}
+
+func (s *PostDBStore) Create(title, content string, author int, topics []int) (*Post, error) {
+	err := s.BeginTx(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %v", err)
+	}
+	defer s.Rollback()
+
+	// First, create the post object
+	stmt, err := s.DB().Prepare(`INSERT INTO posts (title, content, author_id) VALUES (?, ?, ?)`)
+	if err != nil {
+		return nil, fmt.Errorf("preparing post statement: %v", err)
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(title, content, author)
+	if err != nil {
+		return nil, fmt.Errorf("executing post query: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("getting last id: %v", err)
+	}
+
+	// Now, insert into post-topic many-to-many
+	postTopicsQuery := "INSERT INTO post_topics(post_id, topic_id) VALUES "
+	var postTopicsInsert []string
+	var postTopicsValues []any
+
+	const rowSQL = "(?, ?)"
+	for _, topicID := range topics {
+		postTopicsInsert = append(postTopicsInsert, rowSQL)
+		postTopicsValues = append(postTopicsValues, id, topicID)
+	}
+	postTopicsQuery = postTopicsQuery + strings.Join(postTopicsInsert, ",")
+
+	stmt, err = s.DB().Prepare(postTopicsQuery)
+	if err != nil {
+		return nil, fmt.Errorf("preparing post-topics statement: %v", err)
+	}
+
+	result, err = stmt.Exec(postTopicsValues...)
+	if err != nil {
+		return nil, fmt.Errorf("executing post-topics query: %v", err)
+	}
+
+	// Get full post object
+	post, err := s.Get(int(id))
+	if err != nil {
+		return nil, fmt.Errorf("getting post: %v", err)
+	}
+
+	err = s.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("commiting transaction: %v", err)
+	}
+
+	return post, err
+}
+
+func (s *PostDBStore) Get(id int) (*Post, error) {
+	author := users.User{}
+	post := Post{Author: &author}
+	topics := ""
+
+	err := s.DB().
+		QueryRow(
+			`SELECT
+				p.id,
+				p.title,
+				p.content,
+				u.id,
+				u.username,
+				GROUP_CONCAT(t.id || ':' || t.name, ';') AS topics
+			FROM
+				posts p
+				LEFT JOIN users u ON p.author_id = u.id
+				LEFT JOIN post_topics pt ON p.id = pt.post_id
+				LEFT JOIN topics t ON pt.topic_id = t.id
+			WHERE
+				p.id = ?
+			GROUP BY
+				p.id`,
+			id,
+		).
+		Scan(&post.ID, &post.Title, &post.Content, &author.ID, &author.Username, &topics)
+	if err != nil {
+		return nil, fmt.Errorf("scanning post: %v", err)
+	}
+
+	// Parse topics
+	post.Topics = sqlite.ParseGroupConcat(topics, ";", ":", func(v []string) *Topic {
+		tid, _ := strconv.Atoi(v[0])
+		return &Topic{tid, v[1]}
+	})
+
+	return &post, nil
 }

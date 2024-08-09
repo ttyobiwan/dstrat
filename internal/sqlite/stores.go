@@ -35,7 +35,7 @@ func (s *DBStore) DB() ConnOrTx {
 // BeginTx starts a new transaction.
 func (s *DBStore) BeginTx(ctx context.Context) error {
 	if s.tx != nil {
-		return nil
+		return errors.New("there is already a running transaction")
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -65,7 +65,9 @@ func (s *DBStore) Commit() error {
 // Rollback rolls back and closes a transaction.
 func (s *DBStore) Rollback() error {
 	if s.tx == nil {
-		return errors.New("there is no running transaction")
+		// We have to assume that caller of Rollback knows what he is doing
+		// nil will usually be the case when rollback is called in defer after the tx is commited
+		return nil
 	}
 
 	err := s.tx.Rollback()

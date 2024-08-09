@@ -5,3 +5,4 @@ An example app that utilizes Go and Temporal to distribute and execute big numbe
 ## To-do tracker
 
 - Run query planner on composite indexes
+- Consider having a mutex for transaction attribute

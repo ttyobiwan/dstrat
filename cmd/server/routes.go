@@ -24,4 +24,6 @@ func addRoutes(e *echo.Echo, db *sql.DB) {
 	// Posts
 	topicHandler := posts.NewTopicHandler(posts.NewTopicDBStore(db))
 	e.POST("/api/topics", topicHandler.CreateTopic)
+	postHandler := posts.NewPostHandler(posts.NewPostDBStore(db))
+	e.POST("/api/posts", postHandler.CreatePost)
 }

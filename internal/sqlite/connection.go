@@ -60,10 +60,16 @@ func GetDB(filename string) (*sql.DB, error) {
 
 // Configure adds additional configuration for the SQLite database and connection.
 func Configure(db *sql.DB) error {
-	_, err := db.Exec("PRAGMA journal_mode=WAL;")
+	_, err := db.Exec("PRAGMA journal_mode=WAL")
 	if err != nil {
 		return fmt.Errorf("enabling wal mode: %v", err)
 	}
+
+	_, err = db.Exec("PRAGMA foreign_keys = ON")
+	if err != nil {
+		return fmt.Errorf("enabling fks: %v", err)
+	}
+
 	return nil
 }
 
