@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -9,7 +11,32 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/ttyobiwan/dstrat/internal/sqlite"
 )
+
+func getDB(getenv func(string) string) (*sql.DB, error) {
+	dbName := getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "default.sqlite"
+	}
+
+	db, err := sqlite.GetDB(dbName)
+	if err != nil {
+		return nil, fmt.Errorf("getting db: %v", err)
+	}
+
+	err = sqlite.Configure(db)
+	if err != nil {
+		return nil, fmt.Errorf("configuring db: %v", err)
+	}
+
+	err = sqlite.Migrate(db)
+	if err != nil {
+		return nil, fmt.Errorf("migrating db: %v", err)
+	}
+
+	return db, nil
+}
 
 func newServer() *echo.Echo {
 	e := echo.New()
@@ -34,6 +61,13 @@ func run(ctx context.Context, getenv func(string) string) error {
 
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
+
+	// Get dependencies
+	db, err := getDB(getenv)
+	if err != nil {
+		return err
+	}
+	fmt.Println("database", db)
 
 	// Start server
 	srv := newServer()
