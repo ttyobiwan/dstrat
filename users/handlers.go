@@ -8,15 +8,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type UserHandler struct {
-	store UserStore
-}
+type UserHandler struct{}
 
-func NewUserHandler(store UserStore) *UserHandler {
-	return &UserHandler{store}
+func NewUserHandler() *UserHandler {
+	return &UserHandler{}
 }
 
 func (h *UserHandler) CreateUser(c echo.Context) error {
+	store := NewUserDBStore(c.(*UserContext).DB())
 	// Get request data
 	data := struct {
 		Username string `json:"username"`
@@ -29,7 +28,7 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	}
 
 	// Check username uniqueness
-	user, err := h.store.GetByUsername(data.Username)
+	user, err := store.GetByUsername(data.Username)
 	if user != nil {
 		return c.JSON(http.StatusBadRequest, struct {
 			Detail string `json:"detail"`
@@ -40,7 +39,7 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	}
 
 	// Create new user
-	user, err = h.store.Create(data.Username)
+	user, err = store.Create(data.Username)
 	if err != nil {
 		return fmt.Errorf("creating user: %v", err)
 	}

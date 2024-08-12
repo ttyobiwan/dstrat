@@ -77,6 +77,7 @@ func NewPostDBStore(db *sql.DB) *PostDBStore {
 }
 
 func (s *PostDBStore) Create(title, content string, author int, topics []int) (*Post, error) {
+	// Start the transaction
 	err := s.BeginTx(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %v", err)
@@ -122,12 +123,13 @@ func (s *PostDBStore) Create(title, content string, author int, topics []int) (*
 		return nil, fmt.Errorf("executing post-topics query: %v", err)
 	}
 
-	// Get full post object
+	// Finally, get full post object
 	post, err := s.Get(int(id))
 	if err != nil {
 		return nil, fmt.Errorf("getting post: %v", err)
 	}
 
+	// Commit the transaction
 	err = s.Commit()
 	if err != nil {
 		return nil, fmt.Errorf("commiting transaction: %v", err)

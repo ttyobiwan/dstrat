@@ -18,12 +18,8 @@ func addRoutes(e *echo.Echo, db *sql.DB) {
 	})
 
 	// Users
-	userHandler := users.NewUserHandler(users.NewUserDBStore(db))
-	e.POST("/api/users", userHandler.CreateUser)
+	users.GetRoutes(e, db)
 
 	// Posts
-	topicHandler := posts.NewTopicHandler(posts.NewTopicDBStore(db))
-	e.POST("/api/topics", topicHandler.CreateTopic)
-	postHandler := posts.NewPostHandler(posts.NewPostDBStore(db))
-	e.POST("/api/posts", postHandler.CreatePost)
+	posts.GetRoutes(e, db)
 }

@@ -8,15 +8,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type TopicHandler struct {
-	store TopicStore
-}
+type TopicHandler struct{}
 
-func NewTopicHandler(store TopicStore) *TopicHandler {
-	return &TopicHandler{store}
+func NewTopicHandler() *TopicHandler {
+	return &TopicHandler{}
 }
 
 func (h *TopicHandler) CreateTopic(c echo.Context) error {
+	store := NewTopicDBStore(c.(*PostContext).DB())
 	// Get request data
 	data := struct {
 		Name string `json:"name"`
@@ -29,7 +28,7 @@ func (h *TopicHandler) CreateTopic(c echo.Context) error {
 	}
 
 	// Check name uniqueness
-	topic, err := h.store.GetByName(data.Name)
+	topic, err := store.GetByName(data.Name)
 	if topic != nil {
 		return c.JSON(http.StatusBadRequest, struct {
 			Detail string `json:"detail"`
@@ -40,7 +39,7 @@ func (h *TopicHandler) CreateTopic(c echo.Context) error {
 	}
 
 	// Create new topic
-	topic, err = h.store.Create(data.Name)
+	topic, err = store.Create(data.Name)
 	if err != nil {
 		return fmt.Errorf("creating topic: %v", err)
 	}
@@ -48,15 +47,18 @@ func (h *TopicHandler) CreateTopic(c echo.Context) error {
 	return c.JSON(http.StatusCreated, topic)
 }
 
-type PostHandler struct {
-	store PostStore
+func (h *TopicHandler) FollowTopic(c echo.Context) error {
+	return c.JSON(http.StatusCreated, nil)
 }
 
-func NewPostHandler(store PostStore) *PostHandler {
-	return &PostHandler{store}
+type PostHandler struct{}
+
+func NewPostHandler() *PostHandler {
+	return &PostHandler{}
 }
 
 func (h *PostHandler) CreatePost(c echo.Context) error {
+	store := NewPostDBStore(c.(*PostContext).DB())
 	// Get request data
 	// TODO: Author should be taken from header or cookie
 	data := struct {
@@ -73,7 +75,7 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	}
 
 	// Create new post
-	post, err := h.store.Create(data.Title, data.Content, data.Author, data.Topics)
+	post, err := store.Create(data.Title, data.Content, data.Author, data.Topics)
 	if err != nil {
 		return fmt.Errorf("creating post: %v", err)
 	}
