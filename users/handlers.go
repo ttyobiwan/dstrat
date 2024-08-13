@@ -15,7 +15,7 @@ func NewUserHandler() *UserHandler {
 }
 
 func (h *UserHandler) CreateUser(c echo.Context) error {
-	store := NewUserDBStore(c.(*UserContext).DB())
+	store := c.(*UserContext).UserStore()
 	// Get request data
 	data := struct {
 		Username string `json:"username"`

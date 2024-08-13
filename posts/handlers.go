@@ -15,7 +15,7 @@ func NewTopicHandler() *TopicHandler {
 }
 
 func (h *TopicHandler) CreateTopic(c echo.Context) error {
-	store := NewTopicDBStore(c.(*PostContext).DB())
+	store := c.(*PostContext).TopicStore()
 	// Get request data
 	data := struct {
 		Name string `json:"name"`
@@ -48,7 +48,18 @@ func (h *TopicHandler) CreateTopic(c echo.Context) error {
 }
 
 func (h *TopicHandler) FollowTopic(c echo.Context) error {
-	return c.JSON(http.StatusCreated, nil)
+	store := c.(*PostContext).TopicStore()
+
+	topic_id := c.Param("id")
+	// TODO: This should rather by set in some middleware but whatever
+	user_id := c.Request().Header.Get("user")
+
+	err := store.ToggleFollow(topic_id, user_id)
+	if err != nil {
+		return fmt.Errorf("toggling follow: %v", err)
+	}
+
+	return c.JSON(http.StatusNoContent, nil)
 }
 
 type PostHandler struct{}
@@ -58,7 +69,7 @@ func NewPostHandler() *PostHandler {
 }
 
 func (h *PostHandler) CreatePost(c echo.Context) error {
-	store := NewPostDBStore(c.(*PostContext).DB())
+	store := c.(*PostContext).PostStore()
 	// Get request data
 	// TODO: Author should be taken from header or cookie
 	data := struct {

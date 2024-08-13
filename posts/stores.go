@@ -17,6 +17,7 @@ var ErrNotFound = errors.New("entry not found")
 type TopicStore interface {
 	Create(name string) (*Topic, error)
 	GetByName(name string) (*Topic, error)
+	ToggleFollow(topic_id string, user_id string) error
 }
 
 type TopicDBStore struct {
@@ -62,6 +63,43 @@ func (s *TopicDBStore) GetByName(name string) (*Topic, error) {
 	}
 
 	return &topic, nil
+}
+
+func (s *TopicDBStore) ToggleFollow(topic_id string, user_id string) error {
+	var rowid int
+	err := s.
+		DB().
+		QueryRow(`SELECT rowid FROM topic_followers WHERE topic_id = ? AND user_id = ?`, topic_id, user_id).
+		Scan(&rowid)
+	// If there is an error, that is not ErrNoRows, then return it
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("scanning topic follow: %v", err)
+		}
+	}
+	// Otherwise, delete the current follow
+	if rowid != 0 {
+		_, err = s.DB().Exec(`DELETE FROM topic_followers WHERE topic_id = ? AND user_id = ?`, topic_id, user_id)
+		if err != nil {
+			return fmt.Errorf("deleting topic follow: %v", err)
+		}
+		return nil
+	}
+
+	// Create a new follow
+	stmt, err := s.DB().Prepare(`INSERT INTO topic_followers (topic_id, user_id) VALUES (?, ?)`)
+	if err != nil {
+		return fmt.Errorf("preparing statement: %v", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(topic_id, user_id)
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("executing query: %v", err)
+	}
+
+	return nil
 }
 
 type PostStore interface {

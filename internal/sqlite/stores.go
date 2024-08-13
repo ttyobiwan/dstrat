@@ -12,6 +12,7 @@ type ConnOrTx interface {
 	Query(string, ...any) (*sql.Rows, error)
 	QueryRow(string, ...any) *sql.Row
 	Prepare(string) (*sql.Stmt, error)
+	Exec(string, ...any) (sql.Result, error)
 }
 
 // DBStore is a generic store (data access layer) that gives additional functionality of using transactions.

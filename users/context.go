@@ -14,3 +14,7 @@ type UserContext struct {
 func (c *UserContext) DB() *sql.DB {
 	return c.db
 }
+
+func (c *UserContext) UserStore() UserStore {
+	return NewUserDBStore(c.DB())
+}

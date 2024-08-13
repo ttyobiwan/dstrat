@@ -14,3 +14,11 @@ type PostContext struct {
 func (c *PostContext) DB() *sql.DB {
 	return c.db
 }
+
+func (c *PostContext) TopicStore() TopicStore {
+	return NewTopicDBStore(c.DB())
+}
+
+func (c *PostContext) PostStore() PostStore {
+	return NewPostDBStore(c.DB())
+}

@@ -6,3 +6,4 @@ An example app that utilizes Go and Temporal to distribute and execute big numbe
 
 - Run query planner on composite indexes
 - Lowercase what needs to be lowercased
+- Add command for bulk inserting things
