@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"go.temporal.io/sdk/client"
 )
 
 type TopicHandler struct{}
@@ -69,7 +70,8 @@ func NewPostHandler() *PostHandler {
 }
 
 func (h *PostHandler) CreatePost(c echo.Context) error {
-	store := c.(*PostContext).PostStore()
+	pctx := c.(*PostContext)
+
 	// Get request data
 	// TODO: Author should be taken from header or cookie
 	data := struct {
@@ -86,13 +88,22 @@ func (h *PostHandler) CreatePost(c echo.Context) error {
 	}
 
 	// Create new post
+	store := pctx.PostStore()
 	post, err := store.Create(data.Title, data.Content, data.Author, data.Topics)
 	if err != nil {
 		return fmt.Errorf("creating post: %v", err)
 	}
 
-	// TODO: Schedule task to notify followers
-	// This could probably also require a transaction
+	// Send post to the followers
+	// TODO: Add tx and think about the result
+	tc := pctx.TaskClient()
+	tc.Execute(
+		c.Request().Context(),
+		SendPostToTopicFollowers,
+		client.StartWorkflowOptions{TaskQueue: pctx.TaskQueue()},
+		post.ID,
+		data.Topics,
+	)
 
 	return c.JSON(http.StatusCreated, post)
 }

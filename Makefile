@@ -16,6 +16,10 @@ temporal: ## Start temporal server
 server: ## Start echo server using air
 	air
 
+.PHONY: worker
+worker: ## Start temporal worker
+	go run cmd/worker/* -q $(q)
+
 .PHONY: test
 test: ## Run go tests (without caching)
 	go test ./... -count=1

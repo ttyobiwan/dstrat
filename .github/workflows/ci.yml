@@ -29,6 +29,9 @@ jobs:
       - name: Build server
         run: go build cmd/server/*
 
+      - name: Build worker
+        run: go build cmd/worker/*
+
       - name: Run go vet
         run: go vet ./...
 

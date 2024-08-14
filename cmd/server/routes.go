@@ -5,11 +5,12 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/ttyobiwan/dstrat/internal/temporal"
 	"github.com/ttyobiwan/dstrat/posts"
 	"github.com/ttyobiwan/dstrat/users"
 )
 
-func addRoutes(e *echo.Echo, db *sql.DB) {
+func addRoutes(e *echo.Echo, db *sql.DB, tc *temporal.Client) {
 	// Internal
 	e.GET("/api/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, struct {
@@ -21,5 +22,5 @@ func addRoutes(e *echo.Echo, db *sql.DB) {
 	users.GetRoutes(e, db)
 
 	// Posts
-	posts.GetRoutes(e, db)
+	posts.GetRoutes(e, db, tc)
 }

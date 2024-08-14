@@ -12,6 +12,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/ttyobiwan/dstrat/internal/sqlite"
+	"github.com/ttyobiwan/dstrat/internal/temporal"
+	"go.temporal.io/sdk/client"
 )
 
 func getDB(getenv func(string) string) (*sql.DB, error) {
@@ -38,7 +40,11 @@ func getDB(getenv func(string) string) (*sql.DB, error) {
 	return db, nil
 }
 
-func newServer(db *sql.DB) *echo.Echo {
+func getTemporalClient() (*temporal.Client, error) {
+	return temporal.NewClient(client.Options{Logger: slog.Default()})
+}
+
+func newServer(db *sql.DB, tc *temporal.Client) *echo.Echo {
 	e := echo.New()
 
 	e.Use(newLoggingMiddleware())
@@ -48,7 +54,7 @@ func newServer(db *sql.DB) *echo.Echo {
 	e.Use(middleware.RequestID())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{Timeout: time.Second * 25}))
 
-	addRoutes(e, db)
+	addRoutes(e, db, tc)
 
 	return e
 }
@@ -67,9 +73,13 @@ func run(ctx context.Context, getenv func(string) string) error {
 	if err != nil {
 		return err
 	}
+	tc, err := getTemporalClient()
+	if err != nil {
+		return err
+	}
 
 	// Start server
-	srv := newServer(db)
+	srv := newServer(db, tc)
 	go func() {
 		port := getenv("PORT")
 		if port == "" {
@@ -92,6 +102,12 @@ func run(ctx context.Context, getenv func(string) string) error {
 
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			slog.Error("Error shutting down the server", "error", err)
+		}
+		if err := db.Close(); err != nil {
+			slog.Error("Error closing db connection", "error", err)
+		}
+		if err := tc.Close(); err != nil {
+			slog.Error("Error closing temporal client", "error", err)
 		}
 	}()
 	<-done
