@@ -40,8 +40,8 @@ func getDB(getenv func(string) string) (*sql.DB, error) {
 	return db, nil
 }
 
-func getTemporalClient() (*temporal.Client, error) {
-	return temporal.NewClient(client.Options{Logger: slog.Default()})
+func getTemporalClient(ctx context.Context) (*temporal.Client, error) {
+	return temporal.NewClient(ctx, client.Options{Logger: slog.Default()})
 }
 
 func newServer(db *sql.DB, tc *temporal.Client) *echo.Echo {
@@ -73,7 +73,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 	if err != nil {
 		return err
 	}
-	tc, err := getTemporalClient()
+	tc, err := getTemporalClient(ctx)
 	if err != nil {
 		return err
 	}

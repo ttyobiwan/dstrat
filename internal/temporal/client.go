@@ -11,8 +11,8 @@ type Client struct {
 	client client.Client
 }
 
-func NewClient(options client.Options) (*Client, error) {
-	c, err := client.Dial(options)
+func NewClient(ctx context.Context, options client.Options) (*Client, error) {
+	c, err := client.DialContext(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("creating client: %v", err)
 	}
@@ -28,7 +28,7 @@ func (c *Client) Execute(ctx context.Context, task any, options client.StartWork
 }
 
 func (c *Client) AwaitResult(ctx context.Context, task client.WorkflowRun, dest any) error {
-	err := task.Get(context.Background(), &dest)
+	err := task.Get(ctx, &dest)
 	if err != nil {
 		return fmt.Errorf("getting workflow result: %v", err)
 	}
