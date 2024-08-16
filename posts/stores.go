@@ -18,6 +18,12 @@ type TopicStore interface {
 	Create(name string) (*Topic, error)
 	GetByName(name string) (*Topic, error)
 	ToggleFollow(topic_id string, user_id string) error
+	GetFollowers(topics []int) ([]*users.User, error)
+}
+
+type PostStore interface {
+	Create(title, content string, author int, topics []int) (*Post, error)
+	Get(id int) (*Post, error)
 }
 
 type TopicDBStore struct {
@@ -65,11 +71,11 @@ func (s *TopicDBStore) GetByName(name string) (*Topic, error) {
 	return &topic, nil
 }
 
-func (s *TopicDBStore) ToggleFollow(topic_id string, user_id string) error {
+func (s *TopicDBStore) ToggleFollow(topicID string, userID string) error {
 	var rowid int
 	err := s.
 		DB().
-		QueryRow(`SELECT rowid FROM topic_followers WHERE topic_id = ? AND user_id = ?`, topic_id, user_id).
+		QueryRow(`SELECT rowid FROM topic_followers WHERE topic_id = ? AND user_id = ?`, topicID, userID).
 		Scan(&rowid)
 	// If there is an error, that is not ErrNoRows, then return it
 	if err != nil {
@@ -79,7 +85,7 @@ func (s *TopicDBStore) ToggleFollow(topic_id string, user_id string) error {
 	}
 	// Otherwise, delete the current follow
 	if rowid != 0 {
-		_, err = s.DB().Exec(`DELETE FROM topic_followers WHERE topic_id = ? AND user_id = ?`, topic_id, user_id)
+		_, err = s.DB().Exec(`DELETE FROM topic_followers WHERE topic_id = ? AND user_id = ?`, topicID, userID)
 		if err != nil {
 			return fmt.Errorf("deleting topic follow: %v", err)
 		}
@@ -93,7 +99,7 @@ func (s *TopicDBStore) ToggleFollow(topic_id string, user_id string) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(topic_id, user_id)
+	_, err = stmt.Exec(topicID, userID)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("executing query: %v", err)
@@ -102,8 +108,37 @@ func (s *TopicDBStore) ToggleFollow(topic_id string, user_id string) error {
 	return nil
 }
 
-type PostStore interface {
-	Create(title, content string, author int, topics []int) (*Post, error)
+func (s *TopicDBStore) GetFollowers(topics []int) ([]*users.User, error) {
+	// Doing it like this because preparing query with IN statement is fucking crazy hard
+	ids := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(topics)), ","), "[]")
+	query := fmt.Sprintf(
+		`SELECT DISTINCT u.id, u.username
+		FROM topic_followers tf
+		JOIN users u ON tf.user_id = u.id
+		WHERE tf.topic_id IN (%s)`,
+		ids,
+	)
+
+	rows, err := s.DB().Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("executing query: %v", err)
+	}
+	defer rows.Close()
+
+	followers := []*users.User{}
+	for rows.Next() {
+		follower := users.User{}
+		err = rows.Scan(&follower.ID, &follower.Username)
+		if err != nil {
+			return nil, fmt.Errorf("scanning user: %v", err)
+		}
+		followers = append(followers, &follower)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %v", err)
+	}
+
+	return followers, nil
 }
 
 type PostDBStore struct {

@@ -44,12 +44,20 @@ func getDB(getenv func(string) string) (*sql.DB, error) {
 func registerWorkflows(w worker.Worker, queue string, db *sql.DB) error {
 	switch queue {
 	case string(temporal.TemporalQueuePosts):
-		postWorkflows := posts.NewWorkflowManager(db)
-		w.RegisterWorkflow(postWorkflows.SendPostToTopicFollowers)
+		workflows := posts.NewWorkflowManager(db)
+		activities := posts.NewActivityManager(db)
+		w.RegisterWorkflow(workflows.SendPostToTopicFollowers)
+		w.RegisterActivity(activities.GetPost)
+		w.RegisterActivity(activities.GetFollowers)
+		w.RegisterActivity(activities.DispatchSendPost)
 	// Worker for test purposes - register all workflows
 	case testQueueSentinel:
-		postWorkflows := posts.NewWorkflowManager(db)
-		w.RegisterWorkflow(postWorkflows.SendPostToTopicFollowers)
+		workflows := posts.NewWorkflowManager(db)
+		activities := posts.NewActivityManager(db)
+		w.RegisterWorkflow(workflows.SendPostToTopicFollowers)
+		w.RegisterActivity(activities.GetPost)
+		w.RegisterActivity(activities.GetFollowers)
+		w.RegisterActivity(activities.DispatchSendPost)
 	default:
 		return fmt.Errorf("invalid queue name: %s", queue)
 	}
