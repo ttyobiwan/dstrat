@@ -40,8 +40,12 @@ func getDB(getenv func(string) string) (*sql.DB, error) {
 	return db, nil
 }
 
-func getTemporalClient(ctx context.Context) (*temporal.Client, error) {
-	return temporal.NewClient(ctx, client.Options{Logger: slog.Default()})
+func getTemporalClient(ctx context.Context, getenv func(string) string) (*temporal.Client, error) {
+	hostPort := getenv("TEMPORAL_HOSTPORT")
+	if hostPort == "" {
+		hostPort = "127.0.0.1:7233"
+	}
+	return temporal.NewClient(ctx, client.Options{Logger: slog.Default(), HostPort: hostPort})
 }
 
 func newServer(db *sql.DB, tc *temporal.Client) *echo.Echo {
@@ -73,7 +77,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 	if err != nil {
 		return err
 	}
-	tc, err := getTemporalClient(ctx)
+	tc, err := getTemporalClient(ctx, getenv)
 	if err != nil {
 		return err
 	}

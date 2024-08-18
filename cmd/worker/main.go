@@ -47,17 +47,25 @@ func registerWorkflows(w worker.Worker, queue string, db *sql.DB) error {
 		workflows := posts.NewWorkflowManager(db)
 		activities := posts.NewActivityManager(db)
 		w.RegisterWorkflow(workflows.SendPostToTopicFollowers)
+		w.RegisterWorkflow(workflows.SendPostBulk)
+		w.RegisterWorkflow(workflows.SendPostMass)
 		w.RegisterActivity(activities.GetPost)
 		w.RegisterActivity(activities.GetFollowers)
-		w.RegisterActivity(activities.DispatchSendPost)
+		w.RegisterActivity(activities.SendSinglePost)
+		w.RegisterActivity(activities.SendPostSequentially)
+		w.RegisterActivity(activities.SendPostASequentially)
 	// Worker for test purposes - register all workflows
 	case testQueueSentinel:
 		workflows := posts.NewWorkflowManager(db)
 		activities := posts.NewActivityManager(db)
 		w.RegisterWorkflow(workflows.SendPostToTopicFollowers)
+		w.RegisterWorkflow(workflows.SendPostBulk)
+		w.RegisterWorkflow(workflows.SendPostMass)
 		w.RegisterActivity(activities.GetPost)
 		w.RegisterActivity(activities.GetFollowers)
-		w.RegisterActivity(activities.DispatchSendPost)
+		w.RegisterActivity(activities.SendSinglePost)
+		w.RegisterActivity(activities.SendPostSequentially)
+		w.RegisterActivity(activities.SendPostASequentially)
 	default:
 		return fmt.Errorf("invalid queue name: %s", queue)
 	}
@@ -70,7 +78,11 @@ func run(getenv func(string) string, queue string) error {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	}
 
-	c, err := client.Dial(client.Options{Logger: slog.Default()})
+	hostPort := getenv("TEMPORAL_HOSTPORT")
+	if hostPort == "" {
+		hostPort = "127.0.0.1:7233"
+	}
+	c, err := client.Dial(client.Options{Logger: slog.Default(), HostPort: hostPort})
 	if err != nil {
 		return fmt.Errorf("creating client: %v", err)
 	}

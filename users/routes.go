@@ -7,11 +7,11 @@ import (
 )
 
 func GetRoutes(e *echo.Echo, db *sql.DB) {
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+	g := e.Group("/api", func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			return next(&UserContext{c, db})
 		}
 	})
 	userHandler := NewUserHandler()
-	e.POST("/api/users", userHandler.CreateUser)
+	g.POST("/users", userHandler.CreateUser)
 }

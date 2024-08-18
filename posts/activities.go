@@ -44,11 +44,34 @@ func (m *ActivityManager) GetFollowers(topics []int) ([]*users.User, error) {
 	return followers, nil
 }
 
-// TODO:
-//   - Send single
-//   - Send batch
-//   - Send all
-func (m *ActivityManager) DispatchSendPost(post *Post, followers []*users.User) error {
-	slog.Info("Dispatching send post", "post_id", post.ID, "followers_count", len(followers))
+func (m *ActivityManager) SendSinglePost(post *Post, follower *users.User) error {
+	slog.Info("Sending single post", "post_id", post.ID, "follower_id", follower.ID)
+	return SendSinglePost(post, follower)
+}
+
+func (m *ActivityManager) SendPostSequentially(post *Post, followers []*users.User) error {
+	slog.Info("Sending post sequentially", "post_id", post.ID, "followers_count", len(followers))
+
+	for _, follower := range followers {
+		if err := SendSinglePost(post, follower); err != nil {
+			slog.Error("Error sending post", "error", err)
+		}
+	}
+
+	return nil
+}
+
+func (m *ActivityManager) SendPostASequentially(post *Post, followers []*users.User) error {
+	slog.Info("Sending post asequentially", "post_id", post.ID, "followers_count", len(followers))
+
+	// Very naive implementation - should at least have max parameter
+	for _, follower := range followers {
+		go func(follower *users.User) {
+			if err := SendSinglePost(post, follower); err != nil {
+				slog.Error("Error sending post", "error", err)
+			}
+		}(follower)
+	}
+
 	return nil
 }
