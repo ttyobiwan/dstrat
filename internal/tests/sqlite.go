@@ -22,11 +22,11 @@ func GetTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("migrating db: %v", err)
 	}
 	t.Cleanup(func() {
-		files := [3]string{"default_test.sqlite", "default_test.sqlite-shm", "default_test.sqlite-wal"}
-		for _, f := range files {
-			if err := os.Remove(f); err != nil {
-				t.Errorf("removing file: %v", err)
-			}
+		if err := db.Close(); err != nil {
+			t.Logf("closing db: %v", err)
+		}
+		if err := os.Remove("default_test.sqlite"); err != nil {
+			t.Errorf("removing file: %v", err)
 		}
 	})
 	return db
